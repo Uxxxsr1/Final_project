@@ -5,6 +5,10 @@ from datetime import datetime
 import os
 import logging
 from werkzeug.security import generate_password_hash, check_password_hash
+# это для логера
+from logger.models_logs import init_logs_models
+from logger.log_service import init_log_service, LogService
+from logger.routes_logs import init_logs_routes, logs_bp
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(name)s: %(message)s')
 log = logging.getLogger(__name__)
@@ -180,3 +184,54 @@ def get_user_characters(user_id):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+#!!!!! Тут идут уже мои строки (banrig)
+
+# В начале файла main.py, после существующих импортов:
+from logger.models_logs import init_logs_models
+from logger.log_service import init_log_service, LogService
+from logger.routes_logs import init_logs_routes, logs_bp
+
+
+
+# ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ ЛОГОВ
+Action, GameLog = init_logs_models(db)
+init_log_service(db, Action, GameLog)
+init_logs_routes(LogService, Action)
+
+# Регистрация blueprint
+app.register_blueprint(logs_bp)
+
+# Создание таблиц и базовых действий
+with app.app_context():
+    try:
+        # Создаем таблицы (если их нет)
+        db.create_all()
+        
+        # Создаем базовые действия
+        base_actions = [
+            ('attack', 'Атака противника'),
+            ('use_item', 'Использование предмета'),
+            ('cast_spell', 'Применение заклинания'),
+            ('trade', 'Торговля с другим игроком'),
+            ('talk', 'Разговор с NPC или игроком'),
+            ('move', 'Перемещение по локации'),
+            ('quest_complete', 'Завершение квеста'),
+            ('level_up', 'Повышение уровня'),
+            ('create_character', 'Создание персонажа'),
+            ('join_session', 'Присоединение к сессии'),
+            ('create_session', 'Создание сессии'),
+            ('gm_action', 'Действие гейммастера')
+        ]
+        
+        for action_name, description in base_actions:
+            action = Action.query.filter_by(action_name=action_name).first()
+            if not action:
+                db.session.add(Action(action_name=action_name, description=description))
+        
+        db.session.commit()
+        print("Logs system initialized successfully")
+    except Exception as e:
+        print(f"Warning: Could not initialize logs: {e}")
+
+
