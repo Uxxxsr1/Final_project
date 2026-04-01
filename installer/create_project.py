@@ -1,4 +1,16 @@
-# main.py - сервер
+# create_project.py
+import os
+
+def create_project():
+    # Создаем структуру папок
+    os.makedirs("db/logger", exist_ok=True)
+    os.makedirs("db/Plot", exist_ok=True)
+    os.makedirs("db/gui", exist_ok=True)
+    
+    # Создаем файлы (содержимое нужно вставить)
+    files = {
+        "db/__init__.py": "# db/__init__.py\n",
+        "db/main.py": """# main.py - сервер
 from flask import Flask, jsonify, request, g
 from db.models import db, User, Character, Session
 from db.config import Config
@@ -277,3 +289,132 @@ def update_session_vpn(session_id):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+""",
+        "db/models.py": """# db/models.py
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+db = SQLAlchemy()
+
+session_participants = db.Table(
+    'session_participants',
+    db.metadata,
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('session_id', db.Integer, db.ForeignKey('sessions.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('joined_at', db.DateTime, default=datetime.utcnow)
+)
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String, unique=True, nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    
+    characters = db.relationship('Character', backref='owner', lazy=True, cascade='all, delete-orphan')
+    sessions_as_master = db.relationship('Session', foreign_keys='Session.master_id', backref='master', lazy=True)
+    
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.password_hash, password)
+    
+    @property
+    def sessions(self):
+        return self.sessions_as_master + list(self._sessions)
+
+class Session(db.Model):
+    __tablename__ = 'sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+    description = db.Column(db.Text, default="")
+    is_clean = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True)
+    vpn_address = db.Column(db.String(100), nullable=True)
+    vpn_port = db.Column(db.Integer, default=25565)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    master_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    characters = db.relationship('Character', backref='session', lazy=True, cascade='all, delete-orphan')
+    participants = db.relationship('User', secondary=session_participants, backref=db.backref('_sessions', lazy='dynamic'), lazy='dynamic')
+
+class Character(db.Model):
+    __tablename__ = 'characters'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    data = db.Column(db.JSON, default={})
+    is_active = db.Column(db.Boolean, default=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('sessions.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+""",
+        "db/config.py": """# db/config.py
+import os
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'my-secret-key')
+    
+    POSTGRES_USER = os.environ.get('POSTGRES_USER', 'postgres')
+    POSTGRES_PAS = os.environ.get('POSTGRES_PAS', '111')
+    POSTGRES_HOST = os.environ.get('POSTGRES_HOST', 'localhost')
+    POSTGRES_PORT = os.environ.get('POSTGRES_PORT', '5432')
+    POSTGRES_DB = os.environ.get('POSTGRES_DB', 'final_projectt')
+    
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql://{POSTGRES_USER}:{(POSTGRES_PAS)}"
+        f"@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+""",
+        "db/run.py": """# db/run.py
+from db.main import app
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
+""",
+        "requirements.txt": """Flask==3.1.3
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.48
+psycopg2-binary==2.9.9
+PyQt5==5.15.9
+requests==2.31.0
+""",
+        "README.md": """# Final_project
+# Создатели: banrig Uxxxsr1
+
+Песочница для гейммастера в игре ДНД
+
+## Функции:
+- Создание и управление сессиями
+- Система логирования действий
+- Создание сюжетов с выделением элементов
+- VPN настройки для сессий
+- Управление персонажами
+
+## Установка:
+pip install -r requirements.txt
+
+## Запуск сервера:
+python db/run.py
+
+## Запуск клиента:
+python client.py
+"""
+    }
+    
+    print("Создание файлов...")
+    for filepath, content in files.items():
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Создан: {filepath}")
+    
+    print("\n✅ Проект создан!")
+
+if __name__ == "__main__":
+    create_project()

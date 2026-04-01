@@ -1,12 +1,13 @@
+# db/logger/routes_logs.py
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from flask import Blueprint, request, jsonify, g
 from datetime import datetime
 import logging
 from functools import wraps
-from logger.models_logs import Action, GameLog
+from db.logger.models_logs import Action, GameLog
 
 # Будет инициализировано позже
 log_service = None

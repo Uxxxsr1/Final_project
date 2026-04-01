@@ -1,3 +1,4 @@
+# db/config.py
 import os
 
 class Config:
@@ -6,7 +7,7 @@ class Config:
     POSTGRES_USER = os.environ.get('POSTGRES_USER', 'postgres')
     POSTGRES_PAS = os.environ.get('POSTGRES_PAS', '111')
     POSTGRES_HOST = os.environ.get('POSTGRES_HOST', 'localhost')
-    POSTGRES_PORT = os.environ.get('POSTGRES_PORT', '5433')
+    POSTGRES_PORT = os.environ.get('POSTGRES_PORT', '5432')
     POSTGRES_DB = os.environ.get('POSTGRES_DB', 'final_projectt')
     
     SQLALCHEMY_DATABASE_URI = (
