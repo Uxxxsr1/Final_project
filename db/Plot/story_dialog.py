@@ -1,10 +1,12 @@
 # db/Plot/story_dialog.py
+import os
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QTextEdit, QPushButton, QTabWidget, QWidget,
                              QListWidget, QMessageBox, QFileDialog, QSplitter,
                              QApplication)
 from PyQt5.QtCore import Qt
 from db.Plot.story_manager import StoryManager
+
 
 class StoryDialog(QDialog):
     """Диалог для работы с сюжетом"""
@@ -82,6 +84,12 @@ class StoryDialog(QDialog):
             QPushButton#clear_btn:hover {
                 background-color: #c0392b;
             }
+            QPushButton#import_btn {
+                background-color: #9b59b6;
+            }
+            QPushButton#import_btn:hover {
+                background-color: #8e44ad;
+            }
             QTabWidget::pane {
                 background-color: #34495e;
                 border-radius: 8px;
@@ -128,22 +136,35 @@ class StoryDialog(QDialog):
         edit_layout.addWidget(self.story_text)
         
         btn_layout = QHBoxLayout()
+    
+        import_btn = QPushButton("📁 Импорт из TXT")
+        import_btn.setObjectName("import_btn")
+        import_btn.clicked.connect(self.import_story)
+        btn_layout.addWidget(import_btn)
         
-        extract_btn = QPushButton("Выделить элементы")
+        # Новая кнопка добавления элемента
+        add_element_btn = QPushButton("✨ Добавить элемент")
+        add_element_btn.setObjectName("add_element_btn")
+        add_element_btn.setStyleSheet("background-color: #9b59b6;")
+        add_element_btn.clicked.connect(self.add_custom_element)
+        btn_layout.addWidget(add_element_btn)
+        
+        extract_btn = QPushButton("🔍 Выделить элементы")
         extract_btn.setObjectName("extract_btn")
         extract_btn.clicked.connect(self.extract_elements)
         btn_layout.addWidget(extract_btn)
         
-        clear_btn = QPushButton("Очистить")
+        clear_btn = QPushButton("🗑 Очистить")
         clear_btn.setObjectName("clear_btn")
         clear_btn.clicked.connect(self.clear_text)
         btn_layout.addWidget(clear_btn)
         
-        save_btn = QPushButton("Сохранить сюжет")
+        save_btn = QPushButton("💾 Сохранить сюжет")
         save_btn.setObjectName("save_btn")
         save_btn.clicked.connect(self.save_story)
         btn_layout.addWidget(save_btn)
         
+        btn_layout.addStretch()
         edit_layout.addLayout(btn_layout)
         edit_tab.setLayout(edit_layout)
         
@@ -234,6 +255,157 @@ class StoryDialog(QDialog):
         
         self.setLayout(layout)
     
+    def add_custom_element(self):
+        """Добавляет пользовательский элемент в сюжет"""
+        from PyQt5.QtWidgets import QInputDialog, QComboBox, QDialog, QVBoxLayout, QHBoxLayout
+        
+        # Диалог добавления элемента
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Добавление элемента")
+        dialog.setMinimumSize(400, 300)
+        dialog.setStyleSheet("background-color: #2c3e50;")
+        
+        layout = QVBoxLayout()
+        
+        # Тип элемента
+        layout.addWidget(QLabel("Тип элемента:"))
+        type_combo = QComboBox()
+        type_combo.addItems(["Локация", "Персонаж", "Монстр", "Предмет", "Событие"])
+        layout.addWidget(type_combo)
+        
+        # Название
+        layout.addWidget(QLabel("Название:"))
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("Введите название...")
+        layout.addWidget(name_input)
+        
+        # Описание/контекст
+        layout.addWidget(QLabel("Описание/контекст:"))
+        desc_input = QTextEdit()
+        desc_input.setPlaceholderText("Введите описание...")
+        desc_input.setMaximumHeight(100)
+        layout.addWidget(desc_input)
+        
+        # Кнопки
+        btn_layout = QHBoxLayout()
+        add_btn = QPushButton("✅ Добавить")
+        add_btn.setStyleSheet("background-color: #27ae60;")
+        cancel_btn = QPushButton("❌ Отмена")
+        cancel_btn.setStyleSheet("background-color: #95a5a6;")
+        
+        btn_layout.addWidget(add_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+        
+        dialog.setLayout(layout)
+        
+        def on_add():
+            element_type = type_combo.currentText().lower()
+            name = name_input.text().strip()
+            description = desc_input.toPlainText().strip()
+            
+            if not name:
+                QMessageBox.warning(dialog, "Ошибка", "Введите название элемента")
+                return
+            
+            # Добавляем элемент в текст сюжета
+            current_text = self.story_text.toPlainText()
+            new_element = f"\n\n[{element_type.upper()}] {name}"
+            if description:
+                new_element += f"\nОписание: {description}"
+            
+            self.story_text.setPlainText(current_text + new_element)
+            
+            # Логируем добавление
+            self.logger.log_action(f'story_{element_type}', 
+                                details={'name': name, 'context': description})
+            
+            QMessageBox.information(dialog, "Успех", f"Элемент '{name}' добавлен в сюжет!")
+            dialog.accept()
+            
+            # Предлагаем выделить элементы
+            reply = QMessageBox.question(self, "Выделение элементов",
+                                        "Выделить все элементы в сюжете?",
+                                        QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.extract_elements()
+        
+        add_btn.clicked.connect(on_add)
+        cancel_btn.clicked.connect(dialog.reject)
+        
+        dialog.exec_()
+
+    def import_story(self):
+        """Импортирует сюжет из TXT файла"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Выберите файл с сюжетом", 
+            "", 
+            "Текстовые файлы (*.txt);;Все файлы (*)"
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            # Пробуем разные кодировки
+            encodings = ['utf-8', 'cp1251', 'cp866', 'latin-1']
+            content = None
+            
+            for encoding in encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            if content is None:
+                QMessageBox.warning(self, "Ошибка", "Не удалось прочитать файл. Проверьте кодировку.")
+                return
+            
+            # Спрашиваем, заменить текущий текст или добавить
+            current_text = self.story_text.toPlainText()
+            
+            if current_text.strip():
+                reply = QMessageBox.question(
+                    self, 
+                    "Импорт сюжета",
+                    "Заменить текущий текст или добавить в конец?\n\n"
+                    "Да - заменить\n"
+                    "Нет - добавить в конец\n"
+                    "Отмена - отменить импорт",
+                    QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+                )
+                
+                if reply == QMessageBox.Cancel:
+                    return
+                elif reply == QMessageBox.Yes:
+                    self.story_text.setPlainText(content)
+                else:
+                    self.story_text.setPlainText(current_text + "\n\n" + content)
+            else:
+                self.story_text.setPlainText(content)
+            
+            # Автоматически выделяем элементы после импорта
+            reply = QMessageBox.question(
+                self,
+                "Выделение элементов",
+                "Выделить элементы из импортированного сюжета?",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                self.extract_elements()
+            
+            # Логируем импорт
+            self.logger.log_action('import_story', details={'filename': os.path.basename(file_path)})
+            
+            QMessageBox.information(self, "Успех", f"Сюжет импортирован из:\n{file_path}")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Ошибка при импорте файла:\n{str(e)}")
+    
     def extract_elements(self):
         text = self.story_text.toPlainText()
         if not text.strip():
@@ -276,19 +448,12 @@ class StoryDialog(QDialog):
             
             QMessageBox.information(
                 self, "Готово",
-                f"Выделено элементов:
-
-"
-                f"Локации: {len(elements['locations'])}
-"
-                f"Персонажи: {len(elements['characters'])}
-"
-                f"Монстры: {len(elements['monsters'])}
-"
-                f"Предметы: {len(elements['items'])}
-"
-                f"
-Все элементы сохранены в лог!"
+                f"Выделено элементов:\n\n"
+                f"Локации: {len(elements['locations'])}\n"
+                f"Персонажи: {len(elements['characters'])}\n"
+                f"Монстры: {len(elements['monsters'])}\n"
+                f"Предметы: {len(elements['items'])}\n"
+                f"\nВсе элементы сохранены в лог!"
             )
             
         finally:
@@ -310,16 +475,15 @@ class StoryDialog(QDialog):
         
         if element:
             context = element.get('context', 'Нет контекста')
-            self.context_text.setText(f"Элемент: {element['name']}
-"
-                                      f"Ключевое слово: {element.get('keyword', '?')}
-"
+            self.context_text.setText(f"Элемент: {element['name']}\n"
+                                      f"Ключевое слово: {element.get('keyword', '?')}\n"
                                       f"Контекст: {context}")
     
     def clear_text(self):
+        """Очищает весь текст и списки"""
         reply = QMessageBox.question(
             self, "Подтверждение",
-            "Очистить весь текст?",
+            "Очистить весь текст и выделенные элементы?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
@@ -330,6 +494,7 @@ class StoryDialog(QDialog):
             self.items_list.clear()
             self.context_text.clear()
             self.stats_label.setText("Статистика: ожидание...")
+            self.logger.log_action('clear_story')
     
     def save_story(self):
         text = self.story_text.toPlainText()
@@ -353,6 +518,5 @@ class StoryDialog(QDialog):
         
         if filename:
             saved_file = self.story_manager.save_story_to_file(text, filename)
-            QMessageBox.information(self, "Успех", f"Сюжет сохранен в:
-{saved_file}")
+            QMessageBox.information(self, "Успех", f"Сюжет сохранен в:\n{saved_file}")
             self.logger.log_action('save_story', details={'filename': filename})

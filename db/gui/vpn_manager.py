@@ -6,7 +6,22 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 class VPNManager:
     """Управление подключением по IP"""
-    
+    def get_radmin_ip(self):
+        """Получает IP адрес из Radmin VPN"""
+        return self.get_local_ip()
+
+    def open_radmin(self):
+        """Открывает Radmin VPN"""
+        import subprocess
+        import platform
+        
+        system = platform.system()
+        if system == "Windows":
+            try:
+                subprocess.Popen(["C:\\Program Files\\Radmin VPN\\RadminVPN.exe"])
+            except:
+                pass
+
     def __init__(self):
         self.system = platform.system()
     

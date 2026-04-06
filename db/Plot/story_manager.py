@@ -1,4 +1,4 @@
-# db/Plot/story_manager.py
+# story_manager.py
 import json
 import os
 import re
@@ -22,33 +22,17 @@ class StoryManager:
         """Парсит текст и выделяет ключевые элементы"""
         
         # Словари ключевых слов для распознавания
-        location_keywords = [
-            'город', 'деревня', 'замок', 'пещера', 'лес', 'гора', 'долина', 
-            'таверна', 'храм', 'башня', 'подземелье', 'дворец', 'площадь',
-            'село', 'поселение', 'крепость', 'руины', 'болото', 'пустыня',
-            'озеро', 'река', 'море', 'океан', 'остров', 'портал'
-        ]
+        location_keywords = ['город', 'деревня', 'замок', 'пещера', 'лес', 'гора', 'долина', 
+                            'таверна', 'храм', 'башня', 'подземелье', 'дворец', 'площадь']
         
-        character_keywords = [
-            'король', 'королева', 'принц', 'принцесса', 'лорд', 'леди', 
-            'рыцарь', 'маг', 'волшебник', 'жрец', 'купец', 'крестьянин',
-            'воин', 'лучник', 'разбойник', 'вор', 'паладин', 'друид',
-            'колдун', 'чародей', 'алхимик', 'инквизитор', 'стражник'
-        ]
+        character_keywords = ['король', 'королева', 'принц', 'принцесса', 'лорд', 'леди', 
+                             'рыцарь', 'маг', 'волшебник', 'жрец', 'купец', 'крестьянин']
         
-        monster_keywords = [
-            'дракон', 'гоблин', 'орк', 'тролль', 'скелет', 'зомби', 'вампир',
-            'оборотень', 'гигант', 'демон', 'призрак', 'гарпия', 'минотавр',
-            'кобольд', 'огр', 'химера', 'грифон', 'пегас', 'единорог',
-            'василиск', 'медуза', 'циклоп', 'элементаль', 'лих'
-        ]
+        monster_keywords = ['дракон', 'гоблин', 'орк', 'тролль', 'скелет', 'зомби', 'вампир',
+                           'оборотень', 'гигант', 'демон', 'призрак', 'гарпия', 'минотавр']
         
-        item_keywords = [
-            'меч', 'щит', 'кольцо', 'амулет', 'зелье', 'свиток', 'артефакт',
-            'книга', 'ключ', 'сундук', 'сокровище', 'золото', 'оружие', 'броня',
-            'шлем', 'перчатки', 'сапоги', 'плащ', 'посох', 'кинжал', 'лук',
-            'арбалет', 'топор', 'молот', 'копье', 'алебарда'
-        ]
+        item_keywords = ['меч', 'щит', 'кольцо', 'амулет', 'зелье', 'свиток', 'артефакт',
+                        'книга', 'ключ', 'сундук', 'сокровище', 'золото', 'оружие', 'броня']
         
         extracted = {
             'locations': [],
@@ -57,29 +41,23 @@ class StoryManager:
             'items': []
         }
         
-        # Разбиваем на предложения
         sentences = re.split(r'[.!?]+', text)
         
         for sentence in sentences:
-            if not sentence.strip():
-                continue
-                
             sentence_lower = sentence.lower()
             
             # Поиск локаций
             for kw in location_keywords:
                 if kw in sentence_lower:
+                    # Извлекаем фразу с локацией
                     words = sentence.split()
                     for i, word in enumerate(words):
                         if kw in word.lower():
-                            start = max(0, i-2)
-                            end = min(len(words), i+3)
-                            location_name = ' '.join(words[start:end])
+                            location_name = ' '.join(words[max(0, i-2):min(len(words), i+3)])
                             extracted['locations'].append({
                                 'name': location_name.strip(),
                                 'context': sentence.strip(),
-                                'keyword': kw,
-                                'type': 'location'
+                                'keyword': kw
                             })
                             break
             
@@ -89,14 +67,11 @@ class StoryManager:
                     words = sentence.split()
                     for i, word in enumerate(words):
                         if kw in word.lower():
-                            start = max(0, i-2)
-                            end = min(len(words), i+3)
-                            char_name = ' '.join(words[start:end])
+                            char_name = ' '.join(words[max(0, i-2):min(len(words), i+3)])
                             extracted['characters'].append({
                                 'name': char_name.strip(),
                                 'context': sentence.strip(),
-                                'keyword': kw,
-                                'type': 'character'
+                                'keyword': kw
                             })
                             break
             
@@ -106,14 +81,11 @@ class StoryManager:
                     words = sentence.split()
                     for i, word in enumerate(words):
                         if kw in word.lower():
-                            start = max(0, i-2)
-                            end = min(len(words), i+3)
-                            monster_name = ' '.join(words[start:end])
+                            monster_name = ' '.join(words[max(0, i-2):min(len(words), i+3)])
                             extracted['monsters'].append({
                                 'name': monster_name.strip(),
                                 'context': sentence.strip(),
-                                'keyword': kw,
-                                'type': 'monster'
+                                'keyword': kw
                             })
                             break
             
@@ -123,14 +95,11 @@ class StoryManager:
                     words = sentence.split()
                     for i, word in enumerate(words):
                         if kw in word.lower():
-                            start = max(0, i-2)
-                            end = min(len(words), i+3)
-                            item_name = ' '.join(words[start:end])
+                            item_name = ' '.join(words[max(0, i-2):min(len(words), i+3)])
                             extracted['items'].append({
                                 'name': item_name.strip(),
                                 'context': sentence.strip(),
-                                'keyword': kw,
-                                'type': 'item'
+                                'keyword': kw
                             })
                             break
         
@@ -158,74 +127,28 @@ class StoryManager:
             filename = f"story_{timestamp}.txt"
         
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write("=" * 60 + "
-")
-            f.write("СЮЖЕТ
-")
-            f.write(f"Дата: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-")
-            f.write("=" * 60 + "
-
-")
+            f.write(f"=== СЮЖЕТ ===\n")
+            f.write(f"Дата: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"{'='*50}\n\n")
             f.write(text)
-            f.write("
-
-" + "=" * 60 + "
-")
-            f.write("ВЫДЕЛЕННЫЕ ЭЛЕМЕНТЫ
-")
-            f.write("=" * 60 + "
-
-")
+            f.write(f"\n\n{'='*50}\n")
+            f.write(f"=== ВЫДЕЛЕННЫЕ ЭЛЕМЕНТЫ ===\n\n")
             
-            f.write("ЛОКАЦИИ:
-")
+            f.write("ЛОКАЦИИ:\n")
             for loc in self.extracted_items['locations']:
-                f.write(f"  • {loc['name']}
-")
-                if loc.get('context'):
-                    f.write(f"    Контекст: {loc['context'][:100]}...
-")
-            f.write("
-")
+                f.write(f"  - {loc['name']}\n")
             
-            f.write("ПЕРСОНАЖИ:
-")
+            f.write("\nПЕРСОНАЖИ:\n")
             for char in self.extracted_items['characters']:
-                f.write(f"  • {char['name']}
-")
-                if char.get('context'):
-                    f.write(f"    Контекст: {char['context'][:100]}...
-")
-            f.write("
-")
+                f.write(f"  - {char['name']}\n")
             
-            f.write("МОНСТРЫ/ПРОТИВНИКИ:
-")
+            f.write("\nМОНСТРЫ/ПРОТИВНИКИ:\n")
             for monster in self.extracted_items['monsters']:
-                f.write(f"  • {monster['name']}
-")
-                if monster.get('context'):
-                    f.write(f"    Контекст: {monster['context'][:100]}...
-")
-            f.write("
-")
+                f.write(f"  - {monster['name']}\n")
             
-            f.write("ПРЕДМЕТЫ:
-")
+            f.write("\nПРЕДМЕТЫ:\n")
             for item in self.extracted_items['items']:
-                f.write(f"  • {item['name']}
-")
-                if item.get('context'):
-                    f.write(f"    Контекст: {item['context'][:100]}...
-")
-            f.write("
-")
-            
-            f.write("=" * 60 + "
-")
-            f.write("Конец документа
-")
+                f.write(f"  - {item['name']}\n")
         
         return filename
     
@@ -234,62 +157,32 @@ class StoryManager:
         self.extracted_items = self.parse_story_text(text)
         
         if self.logger:
-            # Логируем создание сюжета
-            self.logger.log_action(
-                'create_story',
-                session_id=session_id,
-                details={
-                    'text_length': len(text),
-                    'locations_count': len(self.extracted_items['locations']),
-                    'characters_count': len(self.extracted_items['characters']),
-                    'monsters_count': len(self.extracted_items['monsters']),
-                    'items_count': len(self.extracted_items['items'])
-                }
-            )
-            
             # Логируем локации
             for loc in self.extracted_items['locations']:
                 self.logger.log_action(
                     'story_location',
-                    session_id=session_id,
-                    details={'location': loc['name'], 'context': loc['context'][:200]}
+                    details={'location': loc['name'], 'context': loc['context']}
                 )
             
             # Логируем персонажей
             for char in self.extracted_items['characters']:
                 self.logger.log_action(
                     'story_character',
-                    session_id=session_id,
-                    details={'character': char['name'], 'context': char['context'][:200]}
+                    details={'character': char['name'], 'context': char['context']}
                 )
             
             # Логируем монстров
             for monster in self.extracted_items['monsters']:
                 self.logger.log_action(
                     'story_monster',
-                    session_id=session_id,
-                    details={'monster': monster['name'], 'context': monster['context'][:200]}
+                    details={'monster': monster['name'], 'context': monster['context']}
                 )
             
             # Логируем предметы
             for item in self.extracted_items['items']:
                 self.logger.log_action(
                     'story_item',
-                    session_id=session_id,
-                    details={'item': item['name'], 'context': item['context'][:200]}
+                    details={'item': item['name'], 'context': item['context']}
                 )
         
         return self.extracted_items
-    
-    def get_statistics(self) -> Dict[str, int]:
-        """Получить статистику выделенных элементов"""
-        return {
-            'total_locations': len(self.extracted_items['locations']),
-            'total_characters': len(self.extracted_items['characters']),
-            'total_monsters': len(self.extracted_items['monsters']),
-            'total_items': len(self.extracted_items['items']),
-            'total_elements': (len(self.extracted_items['locations']) + 
-                              len(self.extracted_items['characters']) + 
-                              len(self.extracted_items['monsters']) + 
-                              len(self.extracted_items['items']))
-        }

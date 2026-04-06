@@ -1,4 +1,4 @@
-# main.py - сервер
+# db/main.py
 from flask import Flask, jsonify, request, g
 from db.models import db, User, Character, Session
 from db.config import Config
@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db.logger.models_logs import init_logs_models
 from db.logger.log_service import init_log_service, LogService
 from db.logger.routes_logs import init_logs_routes, logs_bp
+from db.game_routes import game_bp, init_game_routes
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(name)s: %(message)s')
 log = logging.getLogger(__name__)
@@ -26,8 +27,14 @@ Action, GameLog = init_logs_models(db)
 init_log_service(db, Action, GameLog)
 init_logs_routes(LogService, Action)
 
-# Регистрация blueprint
+# Регистрация blueprint логов
 app.register_blueprint(logs_bp)
+
+# ИНИЦИАЛИЗАЦИЯ ИГРОВЫХ МАРШРУТОВ (исправлено!)
+init_game_routes(db, LogService)
+
+# Регистрация blueprint игры
+app.register_blueprint(game_bp)
 
 # Создание таблиц и базовых действий
 with app.app_context():
@@ -46,7 +53,16 @@ with app.app_context():
             ('create_character', 'Создание персонажа'),
             ('join_session', 'Присоединение к сессии'),
             ('create_session', 'Создание сессии'),
-            ('gm_action', 'Действие гейммастера')
+            ('gm_action', 'Действие гейммастера'),
+            ('login', 'Вход в систему'),
+            ('logout', 'Выход из системы'),
+            ('open_gm_window', 'Открытие окна ГМ'),
+            ('open_player_window', 'Открытие окна игрока'),
+            ('gm_update_hp', 'Изменение HP ГМ'),
+            ('gm_update_mp', 'Изменение MP ГМ'),
+            ('gm_add_item', 'Добавление предмета ГМ'),
+            ('player_action', 'Действие игрока'),
+            ('global_event', 'Глобальное событие')
         ]
         
         for action_name, description in base_actions:
@@ -277,3 +293,46 @@ def update_session_vpn(session_id):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+@app.route('/api/characters/<int:character_id>/attach_session', methods=['PUT'])
+def attach_character_to_session(character_id):
+    """Привязывает персонажа к сессии"""
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        
+        character = Character.query.get(character_id)
+        if not character:
+            return jsonify({'error': 'Персонаж не найден'}), 404
+        
+        # Проверяем, не привязан ли уже персонаж
+        if character.session_id:
+            return jsonify({'error': 'Персонаж уже привязан к другой сессии'}), 400
+        
+        session = Session.query.get(session_id)
+        if not session:
+            return jsonify({'error': 'Сессия не найдена'}), 404
+        
+        character.session_id = session_id
+        db.session.commit()
+        
+        return jsonify({'message': 'Character attached to session'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500    
+
+@app.route('/api/characters/<int:character_id>/detach_session', methods=['PUT'])
+def detach_character_from_session(character_id):
+    """Открепляет персонажа от сессии"""
+    try:
+        character = Character.query.get(character_id)
+        if not character:
+            return jsonify({'error': 'Персонаж не найден'}), 404
+        
+        character.session_id = None
+        db.session.commit()
+        
+        return jsonify({'message': 'Character detached from session'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

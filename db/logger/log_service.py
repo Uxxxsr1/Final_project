@@ -9,18 +9,17 @@ GameLog = None
 db = None
 
 def init_log_service(database, action_model, gamelog_model):
-    """Инициализация сервиса логов"""
+    # Инициализация сервиса логов
     global db, Action, GameLog
     db = database
     Action = action_model
     GameLog = gamelog_model
 
 class LogService:
-    """Сервис для управления логами действий"""
+    # Сервис для управления логами действий
     
     @staticmethod
     def get_or_create_action(action_name: str, description: str = None):
-        """Получить существующее действие или создать новое"""
         action = Action.query.filter_by(action_name=action_name).first()
         if not action:
             action = Action(action_name=action_name, description=description)
@@ -40,7 +39,6 @@ class LogService:
         session_id: Optional[int] = None,
         details: Optional[Dict[str, Any]] = None
     ):
-        """Записать действие в лог"""
         action = LogService.get_or_create_action(action_name)
         
         game_log = GameLog(
@@ -67,7 +65,6 @@ class LogService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
     ):
-        """Получить логи для гейммастера"""
         query = GameLog.query
         
         if action_name:
@@ -101,7 +98,6 @@ class LogService:
         offset: int = 0,
         only_own_actions: bool = True
     ):
-        """Получить логи для конкретного игрока"""
         if only_own_actions:
             query = GameLog.query.filter(
                 or_(
@@ -116,7 +112,6 @@ class LogService:
     
     @staticmethod
     def get_player_stats(player_id: int) -> Dict[str, Any]:
-        """Получить статистику действий для игрока"""
         player_actions = GameLog.query.filter(
             or_(
                 GameLog.performer_id == player_id,
@@ -148,14 +143,12 @@ class LogService:
     
     @staticmethod
     def get_session_logs(session_id: int, limit: int = 100):
-        """Получить логи по сессии"""
         return GameLog.query.filter_by(session_id=session_id)\
             .order_by(GameLog.timestamp.desc())\
             .limit(limit).all()
     
     @staticmethod
     def get_character_logs(character_id: int, limit: int = 100):
-        """Получить логи по персонажу"""
         return GameLog.query.filter_by(character_id=character_id)\
             .order_by(GameLog.timestamp.desc())\
             .limit(limit).all()

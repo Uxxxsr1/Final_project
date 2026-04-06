@@ -12,3 +12,4 @@ __all__ = [
     'init_logs_routes',
     'logs_bp'
 ]
+    

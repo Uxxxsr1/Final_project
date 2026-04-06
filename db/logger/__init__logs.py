@@ -3,8 +3,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from main import app
-from models import db
+from gui.main import app
+from db.models import db
 
 with app.app_context():
     print("Creating logs tables...")
@@ -12,5 +12,5 @@ with app.app_context():
     print("Tables created successfully!")
     
     # Проверяем создались ли таблицы
-    from models_logs import Action
+    from logger.models_logs import Action
     print(f"Actions table exists: {Action.query.count() if Action else 'checking...'}")
